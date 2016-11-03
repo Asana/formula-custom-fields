@@ -4,7 +4,8 @@
   "description": "Finds and calculates any formula custom fields in specified projects. (beta)",
   "main": "index.js",
   "dependencies": {
-    "asana": "^0.15.0"
+    "asana": "^0.15.0",
+    "minimist": "^1.2.0"
   },
   "devDependencies": {},
   "scripts": {
