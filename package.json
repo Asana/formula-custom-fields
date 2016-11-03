@@ -1,0 +1,23 @@
+{
+  "name": "formula-custom-fields",
+  "version": "1.0.0",
+  "description": "Finds and calculates any formula custom fields in specified projects. (beta)",
+  "main": "index.js",
+  "dependencies": {
+    "asana": "^0.15.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Asana/formula-custom-fields.git"
+  },
+  "author": "Asana",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Asana/formula-custom-fields/issues"
+  },
+  "homepage": "https://github.com/Asana/formula-custom-fields#readme"
+}
