@@ -102,11 +102,16 @@ projects.forEach(function(project_id) {
                             // TODO make sure the other property got calculated before this one?
                             // Could just rely on it running repetitively
                             var field_value = task_field_values_by_name[formula_object];
-                            if (field_value === undefined) {
-                                // Referenced a field that this task doesn't have, use NaN to unset any calculated value
+                            if ((field_value === null) || (field_value === undefined)) {
+                                // Referenced a field that this task doesn't have, use NaN to not write any value
                                 return NaN;
                             } else if (field_value.number_value !== undefined) {
-                                return field_value.number_value;
+                                if (field_value.number_value === null) {
+                                    // This field is blank for this task, use NaN to not write any value
+                                    return NaN;
+                                } else {
+                                    return field_value.number_value;
+                                }
                             } else if (field_value.text ) {
                                 // Assume everything is a date and return the number of days
                                 return Date.parse(field_value.text) / Date.MILLISECONDS_PER_DAY;
