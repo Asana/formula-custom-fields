@@ -181,21 +181,16 @@ var monitorProjectFormulaFields = function(project_id) {
                     return client.tasks.findByProject(project_id, {
                         opt_fields: "name,completed,custom_fields"
                     }).then(function(tasks_collection) {
+                        // We want to wait for all the tasks to be processed before resolving, but they
+                        // are streamed to us. The first promise waits for the array of individual task
+                        // promises to be completely full, then we wait for them all.
                         var task_promises = [];
                         return new Bluebird(function(streamDone) {
                             tasks_collection.stream().on("data", function (task) {
-                                console.log("Starting task", task.id);
-                                task_promises.push(updateFieldsOnTask(task, formula_fields).then(function () {
-                                    console.log("Completed task", task.id);
-                                }));
-                            }).on("end", function() {
-                                console.log("Streaming tasks is done!", project_id);
-                                streamDone();
-                            });
+                                task_promises.push(updateFieldsOnTask(task, formula_fields));
+                            }).on("end", streamDone);
                         }).then(function() {
-                            return Bluebird.all(task_promises).then(function () {
-                                console.log("Completed all the tasks");
-                            });
+                            return Bluebird.all(task_promises);
                         });
                     });
                 }).then(function() {
@@ -204,8 +199,42 @@ var monitorProjectFormulaFields = function(project_id) {
                     checkOnProjectRepeatedly();
                 });
             } else {
-                console.log("Got incremental update from project", project_id);
-                // if ()
+                console.log("Got incremental update from project", project_id, event);
+                if (event.data.length === 0) {
+                    // No updates, check again in a while
+                    Bluebird.delay(1000).then(function() {
+                        checkOnProjectRepeatedly();
+                    });
+                } else {
+                    console.log("Something changed in project", project_id);
+                    var changed_task_id_to_seen = {};
+                    var changed_task_ids = event.data.map(function(each_data) {
+                        return each_data.resource.id;
+                    }).filter(function(task_id) {
+                        // De-duplication algorithm, because we don't have a Set primitive
+                        if (changed_task_id_to_seen[task_id]) {
+                            return false;
+                        } else {
+                            changed_task_id_to_seen[task_id] = true;
+                            return true;
+                        }
+                    });
+
+                    // This is kinda similar to the full-refresh version above, but has much simpler concurrency,
+                    // but requires a separate request to load each task, so is worth keeping separate
+                    formulaFieldsForProject(project_id).then(function(formula_fields) {
+                        return Bluebird.all(changed_task_ids.map(function(task_id) {
+                            console.log("Recalculating formulae on task", task_id);
+                            return client.tasks.findById(task_id).then(function(task) {
+                                return updateFieldsOnTask(task, formula_fields);
+                            });
+                        }))
+                    }).then(function() {
+                        console.log("Finished processing project", project_id);
+                        // Check again immediately, why not!
+                        checkOnProjectRepeatedly();
+                    });
+                }
             }
         })
     };
